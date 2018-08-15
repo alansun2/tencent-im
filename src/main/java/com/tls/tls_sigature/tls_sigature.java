@@ -64,7 +64,8 @@ public class tls_sigature {
                     "-----END PUBLIC KEY-----";
 
             // generate signature
-            GenTLSSignatureResult result = GenTLSSignature(1400000955, null, "xiaojun", 0, privStr, true);
+            GenTLSSignatureResult result = genTLSSignature("1400000955", "xiaojun", 0, privStr, true);
+            System.out.println(result.urlSig.length());
             if (0 == result.urlSig.length()) {
                 System.out.println("GenTLSSignatureEx failed: " + result.errMessage);
                 return;
@@ -73,9 +74,9 @@ public class tls_sigature {
             System.out.println("---\ngenerate sig:\n" + result.urlSig + "\n---\n");
 
             // check signature
-            CheckTLSSignatureResult checkResult = CheckTLSSignature(result.urlSig, 1400000955, "xiaojun", pubStr);
+            CheckTLSSignatureResult checkResult = checkTLSSignature(result.urlSig, "1400000955", "xiaojun", 0, pubStr, true);
             if (!checkResult.verifyResult) {
-                System.out.println("CheckTLSSignature failed: " + result.errMessage);
+                System.out.println("checkTLSSignature failed: " + result.errMessage);
                 return;
             }
 
@@ -107,9 +108,16 @@ public class tls_sigature {
         String outputString = new String(result, 0, resultLength, "UTF-8");
     }
 
+
+    public static GenTLSSignatureResult genTLSSignature(String appId,
+                                                        String identifier, long accountType,
+                                                        String privStr, boolean sandBox) throws IOException {
+        return genTLSSignature(3600 * 24 * 180, appId, identifier, accountType, privStr, sandBox);
+    }
+
     /**
      * @param expire      有效期，单位是秒，推荐一个月
-     * @param appid       应用的 appid
+     * @param appId       应用的 appId
      * @param identifier  用户 id
      * @param accountType 创建应用后在配置页面上展示的 acctype
      * @param privStr     生成 tls 票据使用的私钥内容
@@ -117,14 +125,14 @@ public class tls_sigature {
      * @throws IOException e
      * @brief 生成 tls 票据
      */
-    public static GenTLSSignatureResult GenTLSSignature(long expire, String appid,
+    public static GenTLSSignatureResult genTLSSignature(long expire, String appId,
                                                         String identifier, long accountType,
                                                         String privStr, boolean sandBox) throws IOException {
 
-        long appidLong = Long.parseLong(appid);
+        long appIdLong = Long.parseLong(appId);
         if (sandBox) {
             accountType = 0;
-            appid = "0";
+            appId = "0";
         }
 
         PrivateKey privKeyStruct = getPrivateKey(privStr);
@@ -133,8 +141,8 @@ public class tls_sigature {
         String jsonString = "{"
                 + "\"TLS.account_type\":\"" + accountType + "\","
                 + "\"TLS.identifier\":\"" + identifier + "\","
-                + "\"TLS.appid_at_3rd\":\"" + appid + "\","
-                + "\"TLS.sdk_appid\":\"" + appidLong + "\","
+                + "\"TLS.appid_at_3rd\":\"" + appId + "\","
+                + "\"TLS.sdk_appid\":\"" + appIdLong + "\","
                 + "\"TLS.expire_after\":\"" + expire + "\"";
 
         if (sandBox) {
@@ -144,10 +152,10 @@ public class tls_sigature {
         jsonString = jsonString + "}";
         String time = String.valueOf(System.currentTimeMillis() / 1000);
         String serialString =
-                "TLS.appid_at_3rd:" + appid + "\n" +
+                "TLS.appid_at_3rd:" + appId + "\n" +
                         "TLS.account_type:" + accountType + "\n" +
                         "TLS.identifier:" + identifier + "\n" +
-                        "TLS.sdk_appid:" + appidLong + "\n" +
+                        "TLS.sdk_appid:" + appIdLong + "\n" +
                         "TLS.time:" + time + "\n" +
                         "TLS.expire_after:" + expire + "\n";
 
@@ -156,8 +164,7 @@ public class tls_sigature {
 
     /**
      * @param urlSig      返回 tls 票据
-     * @param strAppid3rd 填写与 sdkAppid 一致的字符串形式的值
-     * @param skdAppid    应的 appid
+     * @param appId       应的 appId
      * @param identifier  用户 id
      * @param accountType 创建应用后在配置页面上展示的 acctype
      * @param publicKey   用于校验 tls 票据的公钥内容，但是需要先将公钥文件转换为 java 原生 api 使用的格式，下面是推荐的命令
@@ -166,23 +173,22 @@ public class tls_sigature {
      * @throws DataFormatException e
      * @brief 校验 tls 票据
      */
-    public static CheckTLSSignatureResult CheckTLSSignature(String urlSig,
-                                                            String strAppid3rd, long skdAppid,
+    public static CheckTLSSignatureResult checkTLSSignature(String urlSig, String appId,
                                                             String identifier, long accountType,
                                                             String publicKey, boolean sandBox) throws DataFormatException {
 
+        long appIdLong = Long.parseLong(appId);
         if (sandBox) {
             accountType = 0;
-            strAppid3rd = "0";
+            appId = "0";
         }
 
         CheckTLSSignatureResult result = new CheckTLSSignatureResult();
         Security.addProvider(new BouncyCastleProvider());
 
         //DeBaseUrl64 urlSig to json
-        byte[] compressBytes = base64_url.base64DecodeUrl(urlSig.getBytes(Charset.forName("UTF-8")));
         byte[] decompressBytes = new byte[1024];
-        int decompressLength = decompression(compressBytes, decompressBytes);
+        int decompressLength = decompression(base64_url.base64DecodeUrl(urlSig.getBytes(Charset.forName("UTF-8"))), decompressBytes);
 
         String jsonString = new String(Arrays.copyOfRange(decompressBytes, 0, decompressLength));
 
@@ -204,10 +210,10 @@ public class tls_sigature {
 
         //Get Serial String from json
         String serialString =
-                "TLS.appid_at_3rd:" + strAppid3rd + "\n" +
+                "TLS.appid_at_3rd:" + appId + "\n" +
                         "TLS.account_type:" + accountType + "\n" +
                         "TLS.identifier:" + identifier + "\n" +
-                        "TLS.sdk_appid:" + skdAppid + "\n" +
+                        "TLS.sdk_appid:" + appIdLong + "\n" +
                         "TLS.time:" + sigTime + "\n" +
                         "TLS.expire_after:" + sigExpire + "\n";
         try {
@@ -243,9 +249,8 @@ public class tls_sigature {
             jsonObject.put("TLS.time", time);
             jsonString = jsonObject.toString();
 
-            byte[] bytes = jsonString.getBytes(Charset.forName("UTF-8"));
             byte[] compressBytes = new byte[512];
-            int compressBytesLength = compress(bytes, compressBytes);
+            int compressBytesLength = compress(jsonString.getBytes(Charset.forName("UTF-8")), compressBytes);
 
             result.urlSig = new String(base64_url.base64EncodeUrl(Arrays.copyOfRange(compressBytes, 0, compressBytesLength)));
         } catch (Exception e) {
@@ -294,15 +299,15 @@ public class tls_sigature {
     /**
      * 压缩字符
      *
-     * @param compressBytes
-     * @param decompressBytes
-     * @return
+     * @param compressBytes   待压缩字符
+     * @param decompressBytes 存放压缩后的数组
+     * @return int
      */
     private static int compress(byte[] compressBytes, byte[] decompressBytes) {
         Deflater compresser = new Deflater();
-        compresser.setInput(decompressBytes);
+        compresser.setInput(compressBytes);
         compresser.finish();
-        int compressBytesLength = compresser.deflate(compressBytes);
+        int compressBytesLength = compresser.deflate(decompressBytes);
         compresser.end();
         return compressBytesLength;
     }
