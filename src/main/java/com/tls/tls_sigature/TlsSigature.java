@@ -25,10 +25,10 @@ import java.util.zip.Inflater;
 
 public class TlsSigature {
     public static class GenTLSSignatureResult {
-        String errMessage;
-        String urlSig;
-        int expireTime;
-        int initTime;
+        public String errMessage;
+        public String urlSig;
+        public int expireTime;
+        public int initTime;
 
         GenTLSSignatureResult() {
             errMessage = "";
@@ -37,10 +37,10 @@ public class TlsSigature {
     }
 
     public static class CheckTLSSignatureResult {
-        String errMessage;
-        boolean verifyResult;
-        int expireTime;
-        int initTime;
+        public String errMessage;
+        public boolean verifyResult;
+        public int expireTime;
+        public int initTime;
 
         CheckTLSSignatureResult() {
             errMessage = "";
