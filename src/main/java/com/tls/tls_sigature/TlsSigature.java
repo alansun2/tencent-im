@@ -23,7 +23,7 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-public class tls_sigature {
+public class TlsSigature {
     public static class GenTLSSignatureResult {
         String errMessage;
         String urlSig;
